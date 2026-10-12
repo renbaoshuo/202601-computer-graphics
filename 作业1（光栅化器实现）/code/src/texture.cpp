@@ -7,19 +7,38 @@
 namespace CGL {
 
   Color Texture::sample(const SampleParams& sp) {
-    // TODO: Task 6: Fill this in.
+    auto fetch = [&](int level) {
+      return sp.psm == P_NEAREST ? sample_nearest(sp.p_uv, level)
+        : sample_bilinear(sp.p_uv, level);
+    };
 
+    if (sp.lsm == L_ZERO) {
+      return fetch(0);
+    }
 
-// return magenta for invalid level
-    return Color(1, 0, 1);
+    float level = get_level(sp);
+    if (sp.lsm == L_NEAREST) {
+      return fetch((int)round(level));
+    }
+
+    int lower = (int)floor(level);
+    int upper = (int)ceil(level);
+    float weight = level - lower;
+
+    return fetch(lower) * (1 - weight) + fetch(upper) * weight;
   }
 
   float Texture::get_level(const SampleParams& sp) {
-    // TODO: Task 6: Fill this in.
+    Vector2D dx = sp.p_dx_uv - sp.p_uv;
+    Vector2D dy = sp.p_dy_uv - sp.p_uv;
+    dx.x *= width;
+    dx.y *= height;
+    dy.x *= width;
+    dy.y *= height;
 
+    float level = log2(max(dx.norm(), dy.norm()));
 
-
-    return 0;
+    return min((float)mipmap.size() - 1, max(0.0f, level));
   }
 
   Color MipLevel::get_texel(int tx, int ty) {
@@ -27,25 +46,28 @@ namespace CGL {
   }
 
   Color Texture::sample_nearest(Vector2D uv, int level) {
-    // TODO: Task 5: Fill this in.
     auto& mip = mipmap[level];
+    int x = min((int)mip.width - 1, max(0, (int)floor(uv.x * mip.width)));
+    int y = min((int)mip.height - 1, max(0, (int)floor(uv.y * mip.height)));
 
-
-
-
-    // return magenta for invalid level
-    return Color(1, 0, 1);
+    return mip.get_texel(x, y);
   }
 
   Color Texture::sample_bilinear(Vector2D uv, int level) {
-    // TODO: Task 5: Fill this in.
     auto& mip = mipmap[level];
+    double x = min((double)mip.width - 1, max(0.0, uv.x * mip.width - 0.5));
+    double y = min((double)mip.height - 1, max(0.0, uv.y * mip.height - 0.5));
+    int left = (int)floor(x);
+    int top = (int)floor(y);
+    int right = min(left + 1, (int)mip.width - 1);
+    int bottom = min(top + 1, (int)mip.height - 1);
+    float u = x - left;
+    float v = y - top;
 
+    Color a = mip.get_texel(left, top) * (1 - u) + mip.get_texel(right, top) * u;
+    Color b = mip.get_texel(left, bottom) * (1 - u) + mip.get_texel(right, bottom) * u;
 
-
-
-    // return magenta for invalid level
-    return Color(1, 0, 1);
+    return a * (1 - v) + b * v;
   }
 
 
@@ -101,8 +123,7 @@ namespace CGL {
     }
 
     // create mips
-    int subLevels = numSubLevels - (startLevel + 1);
-    for (int mipLevel = startLevel + 1; mipLevel < startLevel + subLevels + 1;
+    for (int mipLevel = startLevel + 1; mipLevel <= startLevel + numSubLevels;
       mipLevel++) {
 
       MipLevel& prevLevel = mipmap[mipLevel - 1];
