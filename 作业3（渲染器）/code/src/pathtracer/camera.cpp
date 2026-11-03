@@ -188,16 +188,18 @@ void Camera::load_settings(string filename) {
  * This function generates a ray from camera perspective, passing through camera / sensor plane (x,y)
  */
 Ray Camera::generate_ray(double x, double y) const {
-
-  // TODO (Part 1.1):
   // compute position of the input sensor sample coordinate on the
   // canonical sensor plane one unit away from the pinhole.
   // Note: hFov and vFov are in degrees.
   //
 
+  Vector3D direction((2 * x - 1) * tan(radians(hFov) / 2),
+                     (2 * y - 1) * tan(radians(vFov) / 2), -1);
+  Ray ray(pos, (c2w * direction).unit());
+  ray.min_t = nClip;
+  ray.max_t = fClip;
 
-  return Ray(pos, Vector3D(0, 0, -1));
-
+  return ray;
 }
 
 } // namespace CGL

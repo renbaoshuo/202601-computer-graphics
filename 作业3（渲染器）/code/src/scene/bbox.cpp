@@ -8,15 +8,34 @@
 namespace CGL {
 
 bool BBox::intersect(const Ray& r, double& t0, double& t1) const {
-
-  // TODO (Part 2.2):
   // Implement ray - bounding box intersection test
   // If the ray intersected the bouding box within the range given by
   // t0, t1, update t0 and t1 with the new intersection times.
 
+  double near = std::max(t0, r.min_t);
+  double far = std::min(t1, r.max_t);
 
-  return true;
+  for (int axis = 0; axis < 3; axis++) {
+    if (r.d[axis] == 0) {
+      if (r.o[axis] < min[axis] || r.o[axis] > max[axis])
+        return false;
+      continue;
+    }
 
+    double enter = (min[axis] - r.o[axis]) / r.d[axis];
+    double exit = (max[axis] - r.o[axis]) / r.d[axis];
+    if (enter > exit)
+      std::swap(enter, exit);
+
+    near = std::max(near, enter);
+    far = std::min(far, exit);
+    if (near > far)
+      return false;
+  }
+
+  t0 = near;
+  t1 = far;
+  return near <= far;
 }
 
 void BBox::draw(Color c, float alpha) const {

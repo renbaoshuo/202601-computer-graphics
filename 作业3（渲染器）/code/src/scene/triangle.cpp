@@ -28,9 +28,8 @@ bool Triangle::has_intersection(const Ray &r) const {
   // function records the "intersection" while this function only tests whether
   // there is a intersection.
 
-
-  return true;
-
+  Intersection isect;
+  return intersect(r, &isect);
 }
 
 bool Triangle::intersect(const Ray &r, Intersection *isect) const {
@@ -38,10 +37,34 @@ bool Triangle::intersect(const Ray &r, Intersection *isect) const {
   // implement ray-triangle intersection. When an intersection takes
   // place, the Intersection data should be updated accordingly
 
+  Vector3D edge = p2 - p1;
+  Vector3D side = p3 - p1;
+  Vector3D p = cross(r.d, side);
+  double det = dot(edge, p);
+  if (det == 0)
+    return false;
+
+  Vector3D offset = r.o - p1;
+  double u = dot(offset, p) / det;
+  if (u < 0 || u > 1)
+    return false;
+
+  Vector3D q = cross(offset, edge);
+  double v = dot(r.d, q) / det;
+  if (v < 0 || u + v > 1)
+    return false;
+
+  double t = dot(side, q) / det;
+  if (t < r.min_t || t > r.max_t)
+    return false;
+
+  r.max_t = t;
+  isect->t = t;
+  isect->n = ((1 - u - v) * n1 + u * n2 + v * n3).unit();
+  isect->primitive = this;
+  isect->bsdf = get_bsdf();
 
   return true;
-
-
 }
 
 void Triangle::draw(const Color &c, float alpha) const {
